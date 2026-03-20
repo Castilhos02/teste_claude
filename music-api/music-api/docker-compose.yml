@@ -1,0 +1,87 @@
+version: "3.9"
+
+services:
+
+  api:
+    build:
+      context: .
+      target: runtime
+    image: music-recommendation-api:local
+    container_name: music_api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=dev-secret-change-in-production-32chars
+      - ALLOWED_ORIGINS=["http://localhost:3000"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - music_net
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: music_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - music_net
+
+  redis-insight:
+    image: redislabs/redisinsight:latest
+    container_name: music_redis_insight
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+    networks:
+      - music_net
+    profiles:
+      - observability
+
+  # ── Test runner ────────────────────────────────────────────────────
+  tests:
+    build:
+      context: .
+      target: builder
+    container_name: music_tests
+    command: >
+      sh -c "pip install '.[dev]' && pytest tests/ -v --tb=short"
+    environment:
+      - ENVIRONMENT=development
+      - JWT_SECRET_KEY=test-secret-key-only-for-tests
+      - REDIS_URL=redis://redis:6379/1
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - music_net
+    profiles:
+      - test
+
+volumes:
+  redis_data:
+
+networks:
+  music_net:
+    driver: bridge
