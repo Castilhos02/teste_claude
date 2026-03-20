@@ -1,6 +1,6 @@
 # Music Recommendation API
 
-API de recomendação musical baseada em análise de grafos, construída com FastAPI, NetworkX e scikit-learn.
+API de recomendação musical baseada em análise de grafos, construída com FastAPI, NetworkX e scikit-learn. Criado somente para testar a funcionalidade do Claude, utilizando poucos comandos para criar algo complexo com uma ferramente de IA nova no mercado. Em processo de análise para entender os recursos a serem implementados para a melhoria dos prompts. 
 
 ## Stack
 
